@@ -22,14 +22,25 @@ import argparse
 # You should modify this sample function to get the generated images from your model
 # You should save the generated images to the gen_data_dir, which is fixed as 'samples'
 sample_op = lambda x : sample_from_discretized_mix_logistic(x, 5)
-def my_sample(model, gen_data_dir, sample_batch_size = 25, obs = (3,32,32), sample_op = sample_op):
-    for label in my_bidict:
-        print(f"Label: {label}")
-        #generate images for each label, each label has 25 images
-        sample_t = sample(model, sample_batch_size, obs, sample_op)
-        sample_t = rescaling_inv(sample_t)
-        save_images(sample_t, os.path.join(gen_data_dir), label=label)
-    pass
+def my_sample(model, gen_data_dir, sample_batch_size=25, obs=(3, 32, 32), sample_op=sample_op):
+    model.eval()
+    device = next(model.parameters()).device  # get model device (CPU or GPU)
+
+    with torch.no_grad():
+        for label in my_bidict.values():
+            print(f"Generating for label: {label}")
+            labels = torch.full((sample_batch_size,), label, dtype=torch.long).to(device)
+            data = torch.zeros(sample_batch_size, *obs).to(device)
+
+            for i in range(obs[1]):
+                for j in range(obs[2]):
+                    out = model(data, label=labels, sample=True)
+                    out_sample = sample_op(out)
+                    data[:, :, i, j] = out_sample[:, :, i, j]
+
+            data = rescaling_inv(data)
+            save_images(data, gen_data_dir, label=f"Class{label}")
+
 # End of your code
 
 if __name__ == "__main__":
