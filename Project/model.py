@@ -16,12 +16,12 @@ class PixelCNNLayer_up(nn.Module):
                                         resnet_nonlinearity, skip_connection=1)
                                             for _ in range(nr_resnet)])
 
-    def forward(self, u, ul):
+    def forward(self, u, ul, cond=None): # ADDING CONDITIONS
         u_list, ul_list = [], []
 
         for i in range(self.nr_resnet):
-            u  = self.u_stream[i](u)
-            ul = self.ul_stream[i](ul, a=u)
+            u  = self.u_stream[i](u, cond=cond)
+            ul = self.ul_stream[i](ul, a=u, cond=cond)
             u_list  += [u]
             ul_list += [ul]
 
@@ -42,17 +42,17 @@ class PixelCNNLayer_down(nn.Module):
                                         resnet_nonlinearity, skip_connection=2)
                                             for _ in range(nr_resnet)])
 
-    def forward(self, u, ul, u_list, ul_list):
+    def forward(self, u, ul, u_list, ul_list, cond=None): # ADDING CONDITIONS
         for i in range(self.nr_resnet):
-            u  = self.u_stream[i](u, a=u_list.pop())
-            ul = self.ul_stream[i](ul, a=torch.cat((u, ul_list.pop()), 1))
+            u  = self.u_stream[i](u, a=u_list.pop(), cond=cond)
+            ul = self.ul_stream[i](ul, a=torch.cat((u, ul_list.pop()), 1), cond=cond)
 
         return u, ul
 
 
 class PixelCNN(nn.Module):
     def __init__(self, nr_resnet=5, nr_filters=80, nr_logistic_mix=10,
-                    resnet_nonlinearity='concat_elu', input_channels=3):
+                    resnet_nonlinearity='concat_elu', input_channels=3, num_classes=4): # ADDED NUM_CLASSES
         super(PixelCNN, self).__init__()
         if resnet_nonlinearity == 'concat_elu' :
             self.resnet_nonlinearity = lambda x : concat_elu(x)
@@ -62,6 +62,9 @@ class PixelCNN(nn.Module):
         self.nr_filters = nr_filters
         self.input_channels = input_channels
         self.nr_logistic_mix = nr_logistic_mix
+
+        self.label_embedding = nn.Embedding(num_classes, nr_filters) # ADDED LEBEL CONDITIONING
+
         self.right_shift_pad = nn.ZeroPad2d((1, 0, 0, 0))
         self.down_shift_pad  = nn.ZeroPad2d((0, 0, 1, 0))
 
@@ -97,7 +100,7 @@ class PixelCNN(nn.Module):
         self.init_padding = None
 
 
-    def forward(self, x, sample=False):
+    def forward(self, x, label=None, sample=False):
         # similar as done in the tf repo :
         if self.init_padding is not sample:
             xs = [int(y) for y in x.size()]
@@ -112,11 +115,18 @@ class PixelCNN(nn.Module):
 
         ###      UP PASS    ###
         x = x if sample else torch.cat((x, self.init_padding), 1)
+
+        ### ADDING:  for translating the class label into a vector that can be injected into the model
+        cond = None
+        if label is not None: 
+            cond = self.label_embedding(label).view(label.shape[0], self.nr_filters, 1, 1)  
+        ###
+
         u_list  = [self.u_init(x)]
         ul_list = [self.ul_init[0](x) + self.ul_init[1](x)]
         for i in range(3):
             # resnet block
-            u_out, ul_out = self.up_layers[i](u_list[-1], ul_list[-1])
+            u_out, ul_out = self.up_layers[i](u_list[-1], ul_list[-1], cond=cond) # ADDED COND
             u_list  += u_out
             ul_list += ul_out
 
@@ -131,7 +141,7 @@ class PixelCNN(nn.Module):
 
         for i in range(3):
             # resnet block
-            u, ul = self.down_layers[i](u, ul, u_list, ul_list)
+            u, ul = self.down_layers[i](u, ul, u_list, ul_list, cond=cond) # ADDED COND
 
             # upscale (only twice)
             if i != 2 :
@@ -157,5 +167,12 @@ class random_classifier(nn.Module):
         torch.save(self.state_dict(), os.path.join(os.path.dirname(__file__), 'models/conditional_pixelcnn.pth'))
     def forward(self, x, device):
         return torch.randint(0, self.NUM_CLASSES, (x.shape[0],)).to(device)
+    
+
+    ### SUMMARIZATION OF CHANGES MADE TO THIS CODE
+
+    # We want the model to condition its generation/classification 
+    # on a class label — so it can generate different images for 
+    # different classes, and compute class-conditioned likelihoods.
     
     
