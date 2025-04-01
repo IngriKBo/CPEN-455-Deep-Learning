@@ -130,15 +130,17 @@ class gated_resnet(nn.Module):
 
 
     def forward(self, og_x, a=None, cond=None):
-        x = self.conv_input(self.nonlinearity(og_x))
-        if a is not None :
-            
-            x += self.nin_skip(self.nonlinearity(a))
+        x = self.nonlinearity(og_x)
 
-        ### add conditional embedding if provided
         if cond is not None:
-            cond = cond.expand(-1, -1, x.size(2), x.size(3)) # spatial broadcast
-            x = torch.cat([x, cond], dim=1)
+            cond = cond.expand(-1, -1, x.size(2), x.size(3))  # broadcast class embedding
+            x = torch.cat([x, cond], dim=1)  # concat before convolution
+
+        x = self.conv_input(x)
+
+        if a is not None:
+          x += self.nin_skip(self.nonlinearity(a))
+
         ###
 
 
