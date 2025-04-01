@@ -138,8 +138,12 @@ class gated_resnet(nn.Module):
         ### add conditional embedding if provided
         if cond is not None:
             cond = cond.expand(-1, -1, x.size(2), x.size(3)) # spatial broadcast
-            x += cond  # assumes shape: (B, C, 1, 1)
+            x = torch.cat([x, cond], dim=1)
         ###
+
+
+        ### 
+    
 
         x = self.nonlinearity(x)
         x = self.dropout(x)
