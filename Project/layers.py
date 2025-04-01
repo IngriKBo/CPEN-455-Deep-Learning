@@ -120,7 +120,7 @@ class gated_resnet(nn.Module):
         super(gated_resnet, self).__init__()
         self.skip_connection = skip_connection
         self.nonlinearity = nonlinearity
-        self.conv_input = conv_op(2 * num_filters, num_filters) # cuz of concat elu
+        self.conv_input = conv_op(3 * num_filters, num_filters) # changed to 3, because we get one more num_filters from cond
 
         if skip_connection != 0 :
             self.nin_skip = nin(2 * skip_connection * num_filters, num_filters)
@@ -132,10 +132,12 @@ class gated_resnet(nn.Module):
     def forward(self, og_x, a=None, cond=None):
         x = self.conv_input(self.nonlinearity(og_x))
         if a is not None :
+            
             x += self.nin_skip(self.nonlinearity(a))
 
         ### add conditional embedding if provided
         if cond is not None:
+            cond = cond.expand(-1, -1, x.size(2), x.size(3)) # spatial broadcast
             x += cond  # assumes shape: (B, C, 1, 1)
         ###
 
