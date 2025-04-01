@@ -119,7 +119,10 @@ class PixelCNN(nn.Module):
         ### ADDING:  for translating the class label into a vector that can be injected into the model
         cond = None
         if label is not None: 
-            cond = self.label_embedding(label).view(label.shape[0], self.nr_filters, 1, 1)  
+            cond = self.label_embedding(label)
+            cond = cond.view(cond.shape[0], cond.shape[1], 1, 1)
+            cond = cond.expand(-1, -1, x.shape[2], x.shape[3])
+  
         ###
 
         u_list  = [self.u_init(x)]
