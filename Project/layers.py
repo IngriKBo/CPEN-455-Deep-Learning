@@ -120,7 +120,7 @@ class gated_resnet(nn.Module):
         super(gated_resnet, self).__init__()
         self.skip_connection = skip_connection
         self.nonlinearity = nonlinearity
-        self.conv_input = conv_op(3 * num_filters, num_filters) # changed to 3, because we get one more num_filters from cond
+        self.conv_input = conv_op(2 * num_filters, num_filters) # changed to 3, because we get one more num_filters from cond
 
         if skip_connection != 0 :
             self.nin_skip = nin(2 * skip_connection * num_filters, num_filters)
