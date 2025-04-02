@@ -25,7 +25,7 @@ def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, m
     
     for batch_idx, item in enumerate(tqdm(data_loader)):
         
-        model_input, _ = item # fjerna label
+        model_input, label = item # fjerna label
         label = label.to(device)
         model_input = model_input.to(device)
         model_output = model(model_input, label=label)  ### ensure PixelCNN model recives label tensor
