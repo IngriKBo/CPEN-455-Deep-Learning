@@ -25,7 +25,8 @@ def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, m
     
     for batch_idx, item in enumerate(tqdm(data_loader)):
         model_input, label = item
-        label = label.to(device)
+        label = torch.tensor([my_bidict[c] for c in label], dtype=torch.long).to(device)
+
         model_input = model_input.to(device)
         model_output = model(model_input, label=label)  ### ensure PixelCNN model recives label tensor
         loss = loss_op(model_input, model_output)
