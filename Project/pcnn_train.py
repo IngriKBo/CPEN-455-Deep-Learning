@@ -27,13 +27,6 @@ def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, m
     
     for batch_idx, item in enumerate(tqdm(data_loader)):
 
-        
-        logits = torch.cat(logits, dim=0)  # shape: [4, batch_size]
-        preds = torch.argmax(logits, dim=0)  # shape: [batch_size]
-        correct += (preds == label).sum().item()
-        total += label.size(0)
-
-
         model_input, label = item
         label = label.to(device)
         model_input = model_input.to(device)
