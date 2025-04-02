@@ -23,13 +23,7 @@ def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, m
     deno =  args.batch_size * np.prod(args.obs) * np.log(2.)        
     loss_tracker = mean_tracker()
     
-
-    
     for batch_idx, item in enumerate(tqdm(data_loader)):
-
-
-
-
         model_input, label = item
         label = label.to(device)
         model_input = model_input.to(device)
@@ -252,5 +246,3 @@ if __name__ == '__main__':
             if not os.path.exists("models"):
                 os.makedirs("models")
             torch.save(model.state_dict(), 'models/{}_{}.pth'.format(model_name, epoch))
-
-       
