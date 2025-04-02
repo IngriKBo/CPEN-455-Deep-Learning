@@ -25,10 +25,10 @@ def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, m
     
     for batch_idx, item in enumerate(tqdm(data_loader)):
         
-        model_input, label = item # fjerna label
+        model_input, label_string = item # fjerna label
         # Convert strings to integer class IDs using your bidict
         my_bidict = bidict({"Class0": 0, "Class1": 1, "Class2": 2, "Class3": 3})
-        label_indices = [my_bidict[l] for l in label_names]
+        label_indices = [my_bidict[l] for l in label_string]
         label = torch.tensor(label_indices, dtype=torch.long).to(device)
         model_input = model_input.to(device)
 
