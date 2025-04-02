@@ -24,9 +24,17 @@ def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, m
     loss_tracker = mean_tracker()
     
     for batch_idx, item in enumerate(tqdm(data_loader)):
-        model_input, _ = item # fjerna label
-        label = label.to(device)
+
+
+        model_input, label_strings = item  # label_strings = ['Class0', 'Class1', ...]
         model_input = model_input.to(device)
+
+# Convert class name strings to integers
+        label_indices = [my_bidict[c] for c in label_strings]  # e.g., 'Class1' → 1
+
+# Convert to tensor and send to correct device
+        label = torch.tensor(label_indices, dtype=torch.long).to(device)
+
         model_output = model(model_input, label=label)  ### ensure PixelCNN model recives label tensor
         loss = loss_op(model_input, model_output)
         loss_tracker.update(loss.item()/deno)
