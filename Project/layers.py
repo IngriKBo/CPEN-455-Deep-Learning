@@ -133,9 +133,9 @@ class gated_resnet(nn.Module):
         x = self.nonlinearity(og_x)
 
         if cond is not None:
-            cond = cond.expand(-1, -1, x.size(2), x.size(3))  # broadcast class embedding
-            x = torch.cat([x, cond], dim=1)  # concat before convolution
-
+            if cond.shape[2:] != x.shape[2:]:
+                cond = F.interpolate(cond, size=(x.shape[2], x.shape[3]), mode='nearest') # checks that cond matches
+            x = torch.cat([x, cond], dim=1)
         x = self.conv_input(x)
 
         if a is not None:
