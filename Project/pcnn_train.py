@@ -22,23 +22,12 @@ def train_or_test(model, data_loader, optimizer, loss_op, device, args, epoch, m
         
     deno =  args.batch_size * np.prod(args.obs) * np.log(2.)        
     loss_tracker = mean_tracker()
-    if mode == 'val':
-        correct = 0
-        total = 0
+    
 
     
     for batch_idx, item in enumerate(tqdm(data_loader)):
 
-        if mode == 'val':
-            with torch.no_grad():
-        # Compute per-class losses to find most likely class
-                 logits = []
-                 for class_id in range(4):  # assuming 4 classes
-                      class_label = torch.full_like(label, class_id)
-                      class_output = model(model_input, label=class_label)
-                      class_loss = loss_op(model_input, class_output)
-                      logits.append(-class_loss.unsqueeze(0))  # negative log-likelihood
-
+        
         logits = torch.cat(logits, dim=0)  # shape: [4, batch_size]
         preds = torch.argmax(logits, dim=0)  # shape: [batch_size]
         correct += (preds == label).sum().item()
@@ -268,6 +257,4 @@ if __name__ == '__main__':
                 os.makedirs("models")
             torch.save(model.state_dict(), 'models/{}_{}.pth'.format(model_name, epoch))
 
-        if args.en_wandb and mode == 'val':
-            wandb.log({"val-accuracy": correct / total})
-
+       
