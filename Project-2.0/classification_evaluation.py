@@ -24,7 +24,38 @@ NUM_CLASSES = len(my_bidict)
 def get_label(model, model_input, device):
     # Write your code here, replace the random classifier with your trained model
     # and return the predicted label, which is a tensor of shape (batch_size,)
-    answer = model(model_input, device)
+    # answer = PixelCNN(nr_resnet=1, nr_filters=40, input_channels=3, nr_logistic_mix=5)
+
+    model_input = model_input.to(device)
+
+ 
+
+    # Brute-force classification: compute loss per label and choose the one with lowest loss
+ 
+
+    losses = []
+ 
+
+    for label in range(NUM_CLASSES):
+ 
+
+        labels = torch.full((model_input.size(0),), label, dtype=torch.long, device=device)
+ 
+
+        out = model(model_input, label)
+ 
+
+        loss = discretized_mix_logistic_loss(model_input, out)
+ 
+
+        losses.append(loss.unsqueeze(0))
+ 
+
+    losses = torch.cat(losses, dim=0)  # shape: (NUM_CLASSES, batch)
+ 
+
+    answer = torch.argmin(losses, dim=0)  # pick the label with lowest loss
+    
     return answer
 # End of your code
 
