@@ -120,7 +120,7 @@ class gated_resnet(nn.Module):
         super(gated_resnet, self).__init__()
         self.skip_connection = skip_connection
         self.nonlinearity = nonlinearity
-        self.conv_input = conv_op(2 * num_filters, num_filters) # cuz of concat elu
+        self.conv_input = conv_op(2 * num_filters, num_filters) # changed to 3
 
         if skip_connection != 0 :
             self.nin_skip = nin(2 * skip_connection * num_filters, num_filters)
@@ -129,10 +129,23 @@ class gated_resnet(nn.Module):
         self.conv_out = conv_op(2 * num_filters, 2 * num_filters)
 
 
-    def forward(self, og_x, a=None):
+    def forward(self, og_x, a=None, cond=None):  # add cond
         x = self.conv_input(self.nonlinearity(og_x))
         if a is not None :
             x += self.nin_skip(self.nonlinearity(a))
+
+            ### add conditional emmbedding if provided
+
+            if cond is not None:
+                cond = cond.expand(-1,-1,x.size(2)) #spatial broadcast
+                x += torch.cat([x,cond], dim=1)
+
+            x = self.conv_input(x)
+
+            if a is not None:
+                x +=self.nin_skip(self.nonlinearity(a))
+            ###
+
         x = self.nonlinearity(x)
         x = self.dropout(x)
         x = self.conv_out(x)
