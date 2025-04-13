@@ -39,19 +39,13 @@ class CPEN455Dataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        img_path, category = self.samples[idx]
-        if category in my_bidict.values():
-            category_name = my_bidict.inverse[category]
-        else:
-            category_name = "Unknown"
-        # print(img_path)
-        image = read_image(img_path)  # Reads the image as a tensor
-        image = image.type(torch.float32) / 255.  # Normalize to [0, 1]
-        if image.shape[0] == 1:
-            image = replicate_color_channel(image)
-        if self.transform:
-          image = self.transform(image)
-        return image, category_name
+          img_path, category_name = self.samples[idx]
+          image = read_image(img_path).float() / 255.
+          if image.shape[0] == 1:
+               image = replicate_color_channel(image)
+          if self.transform:
+               image = self.transform(image)
+          return image, category_name
     
     def get_all_images(self, label):
         return [img for img, cat in self.samples if cat == label]
