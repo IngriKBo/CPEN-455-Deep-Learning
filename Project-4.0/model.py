@@ -16,12 +16,12 @@ class PixelCNNLayer_up(nn.Module):
                                         resnet_nonlinearity, skip_connection=1)
                                             for _ in range(nr_resnet)])
 
-    def forward(self, u, ul):
+    def forward(self, u, ul, cond=None):
         u_list, ul_list = [], []
 
         for i in range(self.nr_resnet):
-            u  = self.u_stream[i](u)
-            ul = self.ul_stream[i](ul, a=u)
+            u  = self.u_stream[i](u, cond=cond)
+            ul = self.ul_stream[i](ul, a=u, cond=cond)
             u_list  += [u]
             ul_list += [ul]
 
@@ -42,17 +42,17 @@ class PixelCNNLayer_down(nn.Module):
                                         resnet_nonlinearity, skip_connection=2)
                                             for _ in range(nr_resnet)])
 
-    def forward(self, u, ul, u_list, ul_list):
+    def forward(self, u, ul, u_list, ul_list, cond=None):
         for i in range(self.nr_resnet):
             u  = self.u_stream[i](u, a=u_list.pop())
-            ul = self.ul_stream[i](ul, a=torch.cat((u, ul_list.pop()), 1))
+            ul = self.ul_stream[i](ul, a=torch.cat((u, ul_list.pop()), 1), cond=cond)
 
         return u, ul
 
 
 class PixelCNN(nn.Module):
     def __init__(self, nr_resnet=5, nr_filters=80, nr_logistic_mix=10,
-                    resnet_nonlinearity='concat_elu', input_channels=3):
+                    resnet_nonlinearity='concat_elu', input_channels=3, num_classes=4):
         super(PixelCNN, self).__init__()
         if resnet_nonlinearity == 'concat_elu' :
             self.resnet_nonlinearity = lambda x : concat_elu(x)
@@ -64,6 +64,9 @@ class PixelCNN(nn.Module):
         self.nr_logistic_mix = nr_logistic_mix
         self.right_shift_pad = nn.ZeroPad2d((1, 0, 0, 0))
         self.down_shift_pad  = nn.ZeroPad2d((0, 0, 1, 0))
+
+        self.label_embedding = nn.Embedding(num_classes, nr_filters)  # adding embedding layer
+
 
         down_nr_resnet = [nr_resnet] + [nr_resnet + 1] * 2
         self.down_layers = nn.ModuleList([PixelCNNLayer_down(down_nr_resnet[i], nr_filters,
@@ -97,7 +100,7 @@ class PixelCNN(nn.Module):
         self.init_padding = None
 
 
-    def forward(self, x, sample=False):
+    def forward(self, x, label=None, sample=False):
         # similar as done in the tf repo :
         if self.init_padding is not sample:
             xs = [int(y) for y in x.size()]
@@ -111,12 +114,25 @@ class PixelCNN(nn.Module):
             x = torch.cat((x, padding), 1)
 
         ###      UP PASS    ###
+
+        # class embedding
+        if label is not None:
+           class_embedding = self.label_embedding(label)  
+           class_embedding = class_embedding.view(x.size(0), -1, 1, 1)  
+           class_embedding = class_embedding.expand(-1, -1, x.size(2), x.size(3))  
+        else:
+           class_embedding = None
+
+        # class conditioning
+        if class_embedding is not None:
+            x = x + class_embedding  # early fusion
+
         x = x if sample else torch.cat((x, self.init_padding), 1)
         u_list  = [self.u_init(x)]
         ul_list = [self.ul_init[0](x) + self.ul_init[1](x)]
         for i in range(3):
             # resnet block
-            u_out, ul_out = self.up_layers[i](u_list[-1], ul_list[-1])
+            u_out, ul_out = self.up_layers[i](u_list[-1], ul_list[-1], cond=class_embedding)
             u_list  += u_out
             ul_list += ul_out
 
@@ -131,7 +147,7 @@ class PixelCNN(nn.Module):
 
         for i in range(3):
             # resnet block
-            u, ul = self.down_layers[i](u, ul, u_list, ul_list)
+            u, ul = self.down_layers[i](u, ul, u_list, ul_list, cond=class_embedding)
 
             # upscale (only twice)
             if i != 2 :
