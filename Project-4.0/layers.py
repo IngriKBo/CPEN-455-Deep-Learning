@@ -129,10 +129,17 @@ class gated_resnet(nn.Module):
         self.conv_out = conv_op(2 * num_filters, 2 * num_filters)
 
 
-    def forward(self, og_x, a=None):
+    def forward(self, og_x, a=None, cond=None):
         x = self.conv_input(self.nonlinearity(og_x))
         if a is not None :
             x += self.nin_skip(self.nonlinearity(a))
+
+        ### 
+
+        if cond is not None:
+            x += cond
+        
+        ###
         x = self.nonlinearity(x)
         x = self.dropout(x)
         x = self.conv_out(x)
