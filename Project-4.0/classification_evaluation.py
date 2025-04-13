@@ -24,7 +24,31 @@ NUM_CLASSES = len(my_bidict)
 def get_label(model, model_input, device):
     # Write your code here, replace the random classifier with your trained model
     # and return the predicted label, which is a tensor of shape (batch_size,)
-    answer = model(model_input, device)
+
+    model_input = model_input.to(device)
+    model.eval()
+
+    with torch.no_grad():
+        log_likelihoods = []
+
+        for class_idx in range(NUM_CLASSES):
+            # Step 1: Create a label tensor filled with this class
+            label_tensor = torch.full((model_input.size(0),), class_idx, dtype=torch.long).to(device)
+
+            # Step 2: Get the model's output for this class
+            output = model(model_input, label=label_tensor)
+
+            # Step 3: Compute negative log-likelihood
+            nll = discretized_mix_logistic_loss(model_input, output)
+            log_likelihoods.append(-nll.unsqueeze(0))  # make shape (1,)
+
+        # Step 4: Stack across all classes → shape (NUM_CLASSES, batch_size)
+        log_likelihoods = torch.cat(log_likelihoods, dim=0)
+
+        # Step 5: Choose the class with highest log-likelihood
+        answer = log_likelihoods.argmax(dim=0)
+
+    # answer = model(model_input, device)
     return answer
 # End of your code
 
@@ -68,7 +92,7 @@ if __name__ == '__main__':
 
     #TODO:Begin of your code
     #You should replace the random classifier with your trained model
-    model = random_classifier(NUM_CLASSES)
+    model = PixelCNN(NUM_CLASSES)
     #End of your code
     
     model = model.to(device)
