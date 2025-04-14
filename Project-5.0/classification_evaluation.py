@@ -22,9 +22,20 @@ NUM_CLASSES = len(my_bidict)
 
 #TODO: Begin of your code
 def get_label(model, model_input, device):
-    # Write your code here, replace the random classifier with your trained model
-    # and return the predicted label, which is a tensor of shape (batch_size,)
-    answer = model(model_input, device)
+    # Generate outputs for all classes and pick the one with highest likelihood
+    model_input = model_input.to(device)
+    batch_size = model_input.size(0)
+    scores = []
+
+    for class_id in range(NUM_CLASSES):
+        class_label = torch.full((batch_size,), class_id, dtype=torch.long, device=device)
+        out = model(model_input, class_label)
+        scores.append(out.view(batch_size, -1).mean(dim=1))  # average log-likelihood
+
+    # Stack scores and take the class with the highest average likelihood
+    scores = torch.stack(scores, dim=1)  # shape: (B, C)
+    answer = torch.argmax(scores, dim=1)
+
     return answer
 # End of your code
 
@@ -68,7 +79,7 @@ if __name__ == '__main__':
 
     #TODO:Begin of your code
     #You should replace the random classifier with your trained model
-    model = random_classifier(NUM_CLASSES)
+    model = PixelCNN(NUM_CLASSES)
     #End of your code
     
     model = model.to(device)
