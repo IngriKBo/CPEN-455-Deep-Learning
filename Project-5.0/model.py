@@ -113,9 +113,9 @@ class PixelCNN(nn.Module):
             x = torch.cat((x, padding), 1)
 
         ###      UP PASS    ###
-        x = x if sample else torch.cat((x, self.init_padding), 1)
-        u_list  = [self.u_init(x)]
-        ul_list = [self.ul_init[0](x) + self.ul_init[1](x)]
+        x_input  = x if sample else torch.cat((x, self.init_padding), 1)
+        u_list  = [self.u_init(x_input)]
+        ul_list = [self.ul_init[0](x_input) + self.ul_init[1](x_input)]
         for i in range(3):
             # resnet block
             u_out, ul_out = self.up_layers[i](u_list[-1], ul_list[-1])
