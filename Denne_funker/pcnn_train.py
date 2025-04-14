@@ -267,6 +267,26 @@ if __name__ == '__main__':
             if args.en_wandb:
                 wandb.log({"samples": sample_result,
                             "FID": fid_score})
+                
+                val_transforms = transforms.Compose([
+                    transforms.Resize((32, 32)),
+                    rescaling
+                ])
+                val_loader = torch.utils.data.DataLoader(
+                    CPEN455Dataset(root_dir=args.data_dir, mode='validation', transform=val_transforms),
+                    batch_size=args.batch_size,
+                    shuffle=False,
+                    num_workers=0,
+                    pin_memory=True,
+                    drop_last=False,
+                )
+
+        acc = classifier(model, val_loader, device)
+        print(f"[Validation Accuracy] Epoch {epoch}: {acc:.4f}")
+        wandb.log({"classification_accuracy": acc})
+                
+
+            
         
         if (epoch + 1) % args.save_interval == 0: 
             if not os.path.exists("models"):
