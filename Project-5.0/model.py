@@ -99,7 +99,7 @@ class PixelCNN(nn.Module):
         self.init_padding = None
 
 
-    def forward(self, x, sample=False):
+    def forward(self, x, sample=False, label=None):
         # similar as done in the tf repo :
         if self.init_padding is not sample:
             xs = [int(y) for y in x.size()]
@@ -130,6 +130,15 @@ class PixelCNN(nn.Module):
         ###    DOWN PASS    ###
         u  = u_list.pop()
         ul = ul_list.pop()
+
+
+        ### middle fusion
+        if label is not None:
+           emb = self.class_embedding(label)  # (B, C)
+           emb = emb.unsqueeze(-1).unsqueeze(-1)  # (B, C, 1, 1)
+           emb = emb.expand_as(ul)  # Broadcast to match (B, C, H, W)
+           ul = ul + emb  # Inject into upper-left stream
+        ###
 
         for i in range(3):
             # resnet block
