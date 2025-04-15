@@ -124,7 +124,7 @@ class PixelCNN(nn.Module):
 
         # class conditioning
         if class_embedding is not None:
-            x = torch.cat((x, class_embedding), dim=1) # early fusion
+            x = torch.cat((x, class_embedding), dim=1) 
 
         x_input = x if sample else torch.cat((x, self.init_padding), 1)
         u_list  = [self.u_init(x_input)]

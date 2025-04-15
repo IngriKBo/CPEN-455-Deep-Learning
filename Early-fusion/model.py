@@ -101,7 +101,7 @@ class PixelCNN(nn.Module):
         self.init_padding = None
 
 
-    def forward(self, x, sample=False):
+    def forward(self, x, sample=False, label=None):
         # similar as done in the tf repo :
         if self.init_padding is not sample:
             xs = [int(y) for y in x.size()]
@@ -116,6 +116,13 @@ class PixelCNN(nn.Module):
 
         ###      UP PASS    ###
         x = x if sample else torch.cat((x, self.init_padding), 1)
+
+        if label is not None:
+            class_cond = self.embedding(label)                      # (B, C)
+            class_cond = class_cond.view(-1, self.input_channels, 1, 1)  # (B, C, 1, 1)
+            x = x + class_cond                                      # broadcast and add
+
+
         u_list  = [self.u_init(x)]
         ul_list = [self.ul_init[0](x) + self.ul_init[1](x)]
         for i in range(3):
