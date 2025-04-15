@@ -65,7 +65,7 @@ class PixelCNN(nn.Module):
         self.right_shift_pad = nn.ZeroPad2d((1, 0, 0, 0))
         self.down_shift_pad  = nn.ZeroPad2d((0, 0, 1, 0))
 
-        self.embedding = nn.Embedding(num_classes, embedding_dim)
+        self.embedding = nn.Embedding(num_classes, nr_filters)
 
 
 
